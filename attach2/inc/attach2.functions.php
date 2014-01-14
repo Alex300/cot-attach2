@@ -284,14 +284,19 @@ function att_check_file($ext)
 
 /**
  * Returns the number of files already attached to an item
- * @param  string  $area Target module/plugin code.
+ * @param  string $area Target module/plugin code.
  * @param  integer $item Target item id.
+ * @param  string $field
  * @return integer
  */
-function att_count_files($area, $item)
+function att_count_files($area, $item, $field = '_all_')
 {
 	global $db, $db_attach;
-	return $db->query("SELECT COUNT(*) FROM $db_attach WHERE att_area = ? AND att_item = ?", array($area, (int)$item))->fetchColumn();
+
+    $whereFileld = '';
+    if($field != '_all_') $whereFileld = "AND att_field=".$db->quote($field);
+
+	return $db->query("SELECT COUNT(*) FROM $db_attach WHERE att_area = ? AND att_item = ? $whereFileld", array($area, (int)$item))->fetchColumn();
 }
 
 /**
@@ -481,7 +486,7 @@ function att_remove_thumbs($id)
  */
 function att_update_file($id, $input)
 {
-	global $usr, $db_attach, $db, $sys;
+	global $usr, $db_attach, $db, $sys, $cfg;
 
 	$fname = att_get_filename($input);
 	$ext = att_get_ext($fname);
@@ -509,6 +514,22 @@ function att_update_file($id, $input)
 		{
 			$size = filesize($path);
 			$img = (int) in_array($ext, array('gif', 'jpg', 'jpeg', 'png'));
+
+            // Image resize
+            if ($img && $cfg['plugin']['attach2']['img_resize']){
+                // Масштабирование
+                list($width_orig, $height_orig) = getimagesize($path);
+                if ($width_orig > $cfg['plugin']['attach2']['img_maxwidht'] || $height_orig > $cfg['plugin']['attach2']['img_maxheight']){
+                    $input_file = $path;
+                    $tmp_file =  att_path($row['att_area'], $row['att_item'], $row['att_id'], 'tmp.'.$ext);
+                    att_cot_thumb($input_file, $tmp_file, $cfg['plugin']['attach2']['img_maxwidht'],
+                        $cfg['plugin']['attach2']['img_maxheight'], 'auto', (int)$cfg['plugin']['attach2']['quality']);
+                    @unlink($input_file);
+                    @rename($tmp_file, $input_file);
+                    $size->size = $file_size = filesize($input_file);
+                }
+            }
+
 			$ratt = array(
 				'att_ext'      => $ext,
 				'att_img'      => $img,
@@ -586,13 +607,14 @@ function att_inc_count($id)
 
 /**
  * Fetches a single attachment object for a given item.
- * @param  string  $area   Target module/plugin code.
- * @param  integer $item   Target item id.
- * @param  string  $column Empty string to return full row, one of the following to return a single value: 'id', 'user', 'path', 'filename', 'ext', 'img', 'size', 'title', 'count'
- * @param  string  $number Attachment number within item, or one of these values: 'first', 'rand' or 'last'. Defines which image is selected.
+ * @param  string $area Target module/plugin code.
+ * @param  integer $item Target item id.
+ * @param  string $field Target item field
+ * @param  string $column Empty string to return full row, one of the following to return a single value: 'id', 'user', 'path', 'filename', 'ext', 'img', 'size', 'title', 'count'
+ * @param  string $number Attachment number within item, or one of these values: 'first', 'rand' or 'last'. Defines which image is selected.
  * @return mixed           Scalar column value, entire row as array or NULL if no attachments found.
  */
-function att_get($area, $item, $column = '', $number = 'first')
+function att_get($area, $item, $field = '', $column = '', $number = 'first')
 {
 	global $db, $db_attach;
 	static $a_cache;
@@ -601,8 +623,10 @@ function att_get($area, $item, $column = '', $number = 'first')
 		$order_by = $number == 'rand' ? 'RAND()' : 'att_order';
 		if ($number == 'last') $order_by .= ' DESC';
 		$offset = is_numeric($number) && $number > 1 ? ((int)$number - 1) . ',' : '';
+        $whereFileld = '';
+        if($field != '_all_') $whereFileld = "AND att_field=".$db->quote($field);
 		$a_cache[$area][$item][$number] = $db->query("SELECT * FROM $db_attach
-			WHERE att_area = ? AND att_item = ?
+			WHERE att_area = ? AND att_item = ? $whereFileld
 			ORDER BY $order_by
 			LIMIT $offset 1", array($area, (int)$item))->fetch();
 	}
@@ -679,6 +703,13 @@ function att_thumb($id, $width = 0, $height = 0, $frame = '')
 			. '-' . $width . 'x' . $height . '-' . $frame . '.' . $row['att_ext'];
 
 		att_cot_thumb($orig_path, $thumb_path, $width, $height, $frame, (int) $cfg['plugin']['attach2']['quality'], (int) $cfg['plugin']['attach2']['upscale']);
+
+        // Watermark
+        if(!empty($cfg['plugin']['attach2']['thumb_watermark']) && file_exists($cfg['plugin']['attach2']['thumb_watermark']))
+        list($th_width, $th_height) = getimagesize($thumb_path);
+        if($th_width >= $cfg['plugin']['attach2']['thumb_wm_x'] || $th_height >= $cfg['plugin']['attach2']['thumb_wm_y']){
+            att_watermark($thumb_path, $thumb_path, $cfg['plugin']['attach2']['thumb_watermark']);
+        }
 	}
 
 	return $thumb_path;
@@ -687,13 +718,14 @@ function att_thumb($id, $width = 0, $height = 0, $frame = '')
 /**
  * Creates image thumbnail
  *
- * @param string  $source  Original image path
- * @param string  $target  Thumbnail path
- * @param int     $width   Thumbnail width
- * @param int     $height  Thumbnail height
- * @param string  $resize  Resize options: crop auto width height
- * @param int     $quality JPEG quality in %
+ * @param string $source Original image path
+ * @param string $target Thumbnail path
+ * @param int $width Thumbnail width
+ * @param int $height Thumbnail height
+ * @param string $resize Resize options: crop auto width height
+ * @param int $quality JPEG quality in %
  * @param boolean $upscale Upscale images smaller than thumb size
+ * @return bool
  */
 function att_cot_thumb($source, $target, $width, $height, $resize = 'crop', $quality = 85, $upscale = false)
 {
@@ -822,14 +854,73 @@ function att_cot_thumb($source, $target, $width, $height, $resize = 'crop', $qua
 }
 
 /**
+ * Adds watermark for image
+ * @param $source
+ * @param $target
+ * @param string $watermark watermark file
+ * @param int $jpegquality
+ * @return bool
+ */
+function att_watermark($source, $target, $watermark = '', $jpegquality = 85){
+
+    if (empty($watermark)) return false;
+
+    $sourceExt = att_get_ext($source);
+    $targetExt = att_get_ext($target);
+
+    $is_img = (int)in_array($sourceExt, array('gif', 'jpg', 'jpeg', 'png'));
+    if (!$is_img) return false;
+
+    // Load the image
+    $image = imagecreatefromstring(file_get_contents($source));
+    $w = imagesx($image);
+    $h = imagesy($image);
+
+    // Load the watermark
+    $watermark = imagecreatefrompng($watermark);
+    $ww = imagesx($watermark);
+    $wh = imagesy($watermark);
+
+    $wmAdded = false;
+    if ( ($ww + 60) < $w && ($wh + 40) < $h ){
+        // Insert watermark to the right bottom corner
+        imagecopy($image, $watermark, intval(($w-$ww)/2), $h-$wh-20, 0, 0, $ww, $wh);
+        unlink($target);
+        switch($targetExt)
+        {
+            case 'gif':
+                imagegif($image, $target);
+                break;
+
+            case 'png':
+                imagepng($image, $target);
+                break;
+
+            default:
+                imagejpeg($image, $target, $jpegquality);
+                break;
+        }
+        $wmAdded = true;
+
+    }
+
+    imagedestroy($watermark);
+    imagedestroy($image);
+    return $wmAdded;
+}
+
+/**
  * Generates a file upload/edit widget.
  * Use it as CoTemplate callback.
- * @param  string  $area    Target module/plugin code.
- * @param  integer $item    Target item id.
- * @param  string  $tpl     Template code
+ * @param  string $area Target module/plugin code.
+ * @param  integer $item Target item id.
+ * @param  string $field Target item field
+ * @param  string $tpl Template code
+ * @param string $width
+ * @param string $height
  * @return string           Rendered widget
  */
-function att_widget($area, $item, $tpl = 'attach2.widget', $width = '100%', $height = '200')
+function att_widget($area, $item, $field = '', $tpl = 'attach2.widget', $width = '100%', $height = '200')
 {
 	global $att_widget_present, $cfg;
 
@@ -841,10 +932,11 @@ function att_widget($area, $item, $tpl = 'attach2.widget', $width = '100%', $hei
 	$t->assign(array(
 		'ATTACH_AREA'    => $area,
 		'ATTACH_ITEM'    => $item,
+        'ATTACH_FIELD'   => $field,
 		'ATTACH_EXTS'    => preg_replace('#[^a-zA-Z0-9,]#', '', $cfg['plugin']['attach2']['exts']),
 		'ATTACH_ACCEPT'  => preg_replace('#[^a-zA-Z0-9,*/-]#', '',$cfg['plugin']['attach2']['accept']),
 		'ATTACH_MAXSIZE' => $limits['file'],
-		'ATTACH_WIDTH' => $width,
+		'ATTACH_WIDTH'  => $width,
 		'ATTACH_HEIGHT' => $height
 	));
 
@@ -857,13 +949,14 @@ function att_widget($area, $item, $tpl = 'attach2.widget', $width = '100%', $hei
 
 /**
  * Renders attached items on page
- * @param  string  $area Target module/plugin code
+ * @param  string $area Target module/plugin code
  * @param  integer $item Target item id
- * @param  string  $tpl  Template code
- * @param  string  $type Attachment type filter: 'files', 'images'. By default includes all attachments.
+ * @param  string $field
+ * @param  string $tpl Template code
+ * @param  string $type Attachment type filter: 'files', 'images'. By default includes all attachments.
  * @return string        Rendered output
  */
-function att_display($area, $item, $tpl = 'attach2.display', $type = 'all')
+function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type = 'all')
 {
 	global $db, $db_attach;
 
@@ -871,7 +964,8 @@ function att_display($area, $item, $tpl = 'attach2.display', $type = 'all')
 
 	$t->assign(array(
 		'ATTACH_AREA'    => $area,
-		'ATTACH_ITEM'    => $item
+		'ATTACH_ITEM'    => $item,
+        'ATTACH_FIELD'   => $field,
 	));
 
 	$type_filter = '';
@@ -883,6 +977,10 @@ function att_display($area, $item, $tpl = 'attach2.display', $type = 'all')
 	{
 		$type_filter = " AND att_img = 1";
 	}
+
+    if($field != '_all_'){
+        $type_filter .= " AND att_field = ".$db->quote($field);
+    }
 
 	$res = $db->query("SELECT * FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter ORDER BY att_order", array($area, (int)$item));
 
@@ -914,12 +1012,13 @@ function att_display($area, $item, $tpl = 'attach2.display', $type = 'all')
 
 /**
  * Returns number of attachments for a specific item.
- * @param  string  $area Target module/plugin code
+ * @param  string $area Target module/plugin code
  * @param  integer $item Target item id
- * @param  string  $type Attachment type filter: 'files', 'images'. By default includes all attachments.
+ * @param  string $field Target item field
+ * @param  string $type Attachment type filter: 'files', 'images'. By default includes all attachments.
  * @return integer       Number of attachments
  */
-function att_count($area, $item, $type = 'all')
+function att_count($area, $item, $field = '', $type = 'all')
 {
 	global $db, $db_attach;
 	static $a_cache = array();
@@ -934,6 +1033,7 @@ function att_count($area, $item, $type = 'all')
 		{
 			$type_filter = " AND att_img = 1";
 		}
+        if($field != '_all_') $type_filter .= " AND att_field=".$db->quote($field);
 
 		$a_cache[$area][$item][$type] = (int) $db->query("SELECT COUNT(*) FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter", array($area, (int)$item))->fetchColumn();
 	}
@@ -942,24 +1042,177 @@ function att_count($area, $item, $type = 'all')
 
 /**
  * Renders files only as downloads block.
- * @param  string  $area Target module/plugin code
+ * @param  string $area Target module/plugin code
  * @param  integer $item Target item id
- * @param  string  $tpl  Template code
+ * @param  string $field
+ * @param  string $tpl Template code
  * @return string        Rendered output
  */
-function att_downloads($area, $item, $tpl = 'attach2.downloads')
+function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads')
 {
-	return att_display($area, $item, $tpl, 'files');
+	return att_display($area, $item, $field, $tpl, 'files');
 }
 
 /**
  * Renders images only as a gallery.
- * @param  string  $area Target module/plugin code
+ * @param  string $area Target module/plugin code
  * @param  integer $item Target item id
- * @param  string  $tpl  Template code
+ * @param  string $field
+ * @param  string $tpl Template code
  * @return string        Rendered output
  */
-function att_gallery($area, $item, $tpl = 'attach2.gallery')
+function att_gallery($area, $item, $field = '', $tpl = 'attach2.gallery')
 {
-	return att_display($area, $item, $tpl, 'images');
+	return att_display($area, $item, $field, $tpl, 'images');
+}
+
+
+/**
+ * Generates a form input file
+ * Use it as CoTemplate callback.
+ *
+ * @param $area
+ * @param $item
+ * @param string $name Input name
+ * @param string $type File types. Comma separated 'all', 'file', 'image', 'audio', 'video'
+ * @param int $limit file limit
+ *      -1 - use plugin config value
+ *       0 - unlimited
+ * @param mixed $attrs Additional attributes as an associative array or a string
+ * @param string $custom_rc Custom resource string name
+ * @return string
+ *
+ * @todo проверка на то, что header уже выполнен или вывод css в header
+ */
+function att_filebox($area, $item, $name = '', $type = 'all', $limit = -1, $attrs = '', $custom_rc = '')
+{
+    global $R, $cfg;
+
+    $jsFunc = 'cot_rc_link_file';
+    if(1 || headers_sent()){
+        $jsFunc = 'cot_rc_link_footer';
+    }
+
+    // Подключаем jQuery-templates только один раз
+    static $jQtemlatesOut = false;
+    $jQtemlates = '';
+    if(!$jQtemlatesOut){
+        $tpl = new XTemplate(cot_tplfile('attach2.templates', 'plug'));
+        $tpl->parse();
+        $jQtemlates = $tpl->text();
+        $jQtemlatesOut = true;
+
+
+        // todo nocache parameters
+        // Generic page styles
+        $jsFunc($cfg['plugins_dir'].'/attach2/tpl/filebox.css');
+
+        // Bootstrap Image Gallery styles
+        //$jsFunc($cfg['plugins_dir'].'/attach2/lib/Gallery/css/blueimp-gallery.min.css');
+
+        // CSS to style the file input field as button and adjust the Bootstrap progress bars
+        $jsFunc($cfg['plugins_dir'].'/attach2/lib/upload/css/jquery.fileupload.css');
+        $jsFunc($cfg['plugins_dir'].'/attach2/lib/upload/css/jquery.fileupload-ui.css');
+
+
+        /* === Java Scripts === */
+        // The jQuery UI widget factory, can be omitted if jQuery UI is already included
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/vendor/jquery.ui.widget.js');
+
+        // The Templates plugin is included to render the upload/download listings
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/JavaScript-Templates/tmpl.min.js');
+
+        // The Load Image plugin is included for the preview images and image resizing functionality
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/JavaScript-Load-Image/js/load-image.min.js');
+
+        // The Canvas to Blob plugin is included for image resizing functionality
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/JavaScript-Canvas-to-Blob/canvas-to-blob.min.js');
+
+        // blueimp Gallery script
+        //cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/Gallery/js/jquery.blueimp-gallery.min.js');
+
+        // The Iframe Transport is required for browsers without support for XHR file uploads
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.iframe-transport.js');
+
+        // The basic File Upload plugin
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload.js');
+
+        // The File Upload file processing plugin
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload-process.js');
+
+        // The File Upload image preview & resize plugin
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload-image.js');
+
+        // The File Upload audio preview plugin
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload-audio.js');
+
+        // The File Upload video preview plugin
+        //cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload-video.js');
+
+        // The File Upload validation plugin
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload-validate.js');
+
+        // The File Upload user interface plugin
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/jquery.fileupload-ui.js');
+
+    //    // The localization script
+    //    cot_rc_link_footer($cfg['plugins_dir'].'/attach2/lib/upload/js/locale.js');
+
+
+        // The main application script
+        cot_rc_link_footer($cfg['plugins_dir'].'/attach2/js/attach2.js');
+
+        // Table Drag&Drop plugin for reordering
+        cot_rc_link_footer('js/jquery.tablednd.min.js');
+    }
+
+    $formId = "{$area}_{$item}_{$name}";
+    $type = str_replace(' ', '', $type);
+    if(empty($type)){
+        $type = array('all');
+    }else{
+        $type = explode(',', $type);
+    }
+    $type = json_encode($type);
+
+    $t = new XTemplate(cot_tplfile('attach2.filebox', 'plug'));
+
+
+    $limits = att_get_limits();
+    if($limit == 0){
+        $limit = 100000000000000000;
+    }elseif($limit == -1){
+        $limit = $cfg['plugin']['attach2']['items'] > 0 ? (int)$cfg['plugin']['attach2']['items'] : 100000000000000000;
+    }
+
+    $unikey = mb_substr(md5($formId . '_' . rand(0, 99999999)), 0, 15);
+    $params = base64_encode(serialize(array(
+        'area'    => $area,
+        'item'    => $item,
+        'field'   => $name,
+        'limit'   => $limit,
+        'type'    => $type,
+        'unikey' => $unikey
+    )));
+
+    $action = 'index.php?r=attach2&a=upload&area='.$area.'&item='.$item;
+    if(!empty($name)) $action .= '&field='.$name;
+    // Metadata
+    $t->assign(array(
+        'ATTACH_ID'      => $formId,
+        'ATTACH_AREA'    => $area,
+        'ATTACH_ITEM'    => $item,
+        'ATTACH_FIELD'   => $name,
+        'ATTACH_LIMIT'   => $limit,
+        'ATTACH_TYPE'    => $type,
+        'ATTACH_PARAM'   => $params,
+        'ATTACH_CHUNK'   => (int)$cfg['plugin']['attach2']['chunkSize'],
+        'ATTACH_EXTS'    => preg_replace('#[^a-zA-Z0-9,]#', '', $cfg['plugin']['attach2']['exts']),
+        'ATTACH_ACCEPT'  => preg_replace('#[^a-zA-Z0-9,*/-]#', '',$cfg['plugin']['attach2']['accept']),
+        'ATTACH_MAXSIZE' => $limits['file'],
+        'ATTACH_ACTION'  => $action
+    ));
+
+    $t->parse();
+    return $t->text().$jQtemlates;
 }

@@ -1,51 +1,99 @@
 /*jslint nomen: true, unparam: true, regexp: true */
 /*global $, window, document, console */
 
+var dndOffset = 0;
 $(function () {
     'use strict';
 
+    var x = $('input[name="x"][type="hidden"]').first().val();
+
     // Initialize the jQuery File Upload widget:
-    $('#fileupload').fileupload({
-        url: $('#fileupload').attr('action'),
-        autoUpload: attConfig.autoUpload,
-        sequentialUploads: attConfig.sequential
+    $('.fileupload').each(function () {
+        var fileInput = $(this);
+
+        var uplId = $(this).attr('id');
+        uplId = uplId.replace('fileupload_', '');
+
+        $(this).fileupload({
+            dropZone: $(this),
+            formData: {
+                param: attConfig[uplId].param,
+                x: x
+            },
+            autoUpload: attConfig.autoUpload,
+            maxChunkSize: attConfig[uplId]['chunk'],
+            sequentialUploads: attConfig.sequential
+        });
+
+        // Enable iframe cross-domain access via redirect option:
+        $(this).fileupload(
+            'option',
+            'redirect',
+            window.location.href.replace(
+                /\/[^\/]*$/,
+                'plugins/attach2/lib/upload/cors/result.html?%s'
+            )
+        );
+
+        // Load existing files:
+        fileInput.addClass('fileupload-processing');
+        $.ajax({
+            // Uncomment the following to send cross-domain cookies:
+            //xhrFields: {withCredentials: true},
+            url: fileInput.fileupload('option', 'url'),
+            dataType: 'json',
+            context: $(fileInput)[0]
+        }).always(function () {
+                $(this).removeClass('fileupload-processing');
+            }).done(function (result) {
+                $(this).fileupload('option', 'done')
+                    .call(this, $.Event('done'), {result: result});
+
+                // Drag&Drop for reordering
+                setTimeout(function() {
+                    fileInput.find(".attTable").tableDnD({
+                        onDragStart: function(table, row){
+                            var offset = $(row).offset();
+                            dndOffset = offset.top;
+                        },
+                        onDrop: function(table, row) {
+
+                            var offset = $(row).offset();
+                            if(Math.abs(dndOffset - offset.top) < 20 ) return;
+
+                            dndOffset = 0;
+
+                            var orders = [];
+                            var i = 0;
+                            var rows = table.tBodies[0].rows;
+                            $(rows).each(function() {
+                                var id = $(this).attr('data-id');
+                                orders[i] = id;
+                                i++;
+                            });
+
+                            var x = $('input[name="x"][type="hidden"]').first().val();
+                            var updateUrl = 'index.php?r=attach2&a=reorder&area='+attConfig[uplId].area+'&item='+
+                                attConfig[uplId].item+'&field='+attConfig[uplId].field+'&x='+x;
+
+                            var procDiv = $('<div>', { 'id': "task-processing" });
+                            $(table).before( procDiv );
+
+                            $.post(updateUrl, {orders: orders}, function(data) {
+                                procDiv.remove();
+                            });
+                        }
+                    });
+                }, 300);
+
+            });
     });
 
-    // Enable iframe cross-domain access via redirect option:
-    $('#fileupload').fileupload(
-        'option',
-        'redirect',
-        window.location.href.replace(
-            /\/[^\/]*$/,
-            'plugins/attach2/lib/upload/cors/result.html?%s'
-        )
-    );
-
-    // Load existing files:
-    // $('#fileupload').each(function () {
-    //     var that = this;
-    //     $.getJSON(this.action, function (result) {
-    //         if (result && result.length) {
-    //             $(that).fileupload('option', 'done')
-    //                 .call(that, null, {result: result});
-    //         }
-    //     });
-    // });
-    $.ajax({
-        // Uncomment the following to send cross-domain cookies:
-        //xhrFields: {withCredentials: true},
-        url: $('#fileupload').fileupload('option', 'url'),
-        dataType: 'json',
-        context: $('#fileupload')[0]
-    }).done(function (result) {
-        $(this).fileupload('option', 'done')
-            .call(this, null, {result: result});
-    });
 
     if (window.FormData) {
         // Replacement of existing images
         // Supported on moder browsers only
-        $('.container').on('change', 'input.att-replace-file', function() {
+        $('.fileupload').on('change', 'input.att-replace-file', function() {
             var id   = $(this).attr('data-id');
             var filename = $(this).val();
             var pass = true;
@@ -66,7 +114,7 @@ $(function () {
             }
         });
 
-        $('.container').on('click', 'button.att-replace-button', function() {
+        $('.fileupload').on('click', 'button.att-replace-button', function() {
             var id   = $(this).attr('data-id');
             var input = document.getElementById("att-file"+id);
             var formdata = new FormData();
@@ -80,7 +128,8 @@ $(function () {
             var x = $('input[name="x"][type="hidden"]').first().val();
             var updateUrl = 'index.php?r=attach2&a=replace&id='+id+'&x='+x;
 
-            $('.fileupload-loading').show();
+            var procDiv = $('<div>', { 'id': "task-processing" });
+            $(this).before( procDiv );
 
             $.ajax({
                 url: updateUrl,
@@ -89,8 +138,9 @@ $(function () {
                 processData: false,
                 contentType: false,
                 success: function (res) {
-                    $('.fileupload-loading').hide();
+                    $(procDiv).remove();
                     // Reload the frame
+                    // todo обойтись без перезагрузки страницы
                     window.location.reload();
                 }
             });
@@ -99,7 +149,7 @@ $(function () {
     }
 
     // Title editing for uploaded items
-    $('.container').on('change', 'input.att-edit-title', function() {
+    $('.fileupload').on('change', 'input.att-edit-title', function() {
         var that = this;
         var id   = $(this).attr('data-id');
         var x    = $('input[name="x"][type="hidden"]').first().val();
@@ -108,38 +158,47 @@ $(function () {
 
         var value = $(this).val();
 
-        $('.fileupload-loading').show();
+        var procDiv = $('<div>', { 'id': "task-processing" });
+        $(this).before( procDiv );
         $(this).attr('disabled', true);
 
         $.post(updateUrl, {title: value}, function() {
             $(that).attr('disabled', false);
             $('.fileupload-loading').hide();
+            $(procDiv).remove();
         });
 
     });
 
-    // Drag&Drop for reordering
-    setTimeout(function() {
-        $("#attTable").tableDnD({
-            onDrop: function(table, row) {
-                var orders = [];
-                var i = 0;
-                $("#attTable td.name").each(function() {
-                    var id = $(this).find('input[name="title"]').attr('data-id');
-                    orders[i] = id;
-                    i++;
-                });
-
-                var x = $('input[name="x"][type="hidden"]').first().val();
-                var updateUrl = 'index.php?r=attach2&a=reorder&area='+attConfig.area+'&item='+attConfig.item+'&x='+x;
-
-                $('.fileupload-loading').show();
-
-                $.post(updateUrl, {orders: orders}, function(data) {
-                    $('.fileupload-loading').hide();
-                });
+    $(document).bind('dragover', function (e) {
+        var dropZone = $('#dropzone'),
+            timeout = window.dropZoneTimeout;
+        if (!timeout) {
+            dropZone.addClass('in');
+        } else {
+            clearTimeout(timeout);
+        }
+        var found = false,
+            node = e.target;
+        do {
+            if (node === dropZone[0]) {
+                found = true;
+                break;
             }
-        });
-    }, 300);
+            node = node.parentNode;
+        } while (node != null);
+        if (found) {
+            dropZone.addClass('hover');
+        } else {
+            dropZone.removeClass('hover');
+        }
+        window.dropZoneTimeout = setTimeout(function () {
+            window.dropZoneTimeout = null;
+            dropZone.removeClass('in hover');
+        }, 1500);
+    });
 
+    $(document).bind('drop dragover', function (e) {
+        e.preventDefault();
+    });
 });

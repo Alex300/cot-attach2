@@ -8,6 +8,7 @@ defined('COT_CODE') or die('Wrong URL.');
 
 $area = cot_import('area', 'R', 'ALP');
 $item = cot_import('item', 'R', 'INT');
+$field = (string)cot_import('field', 'R', 'TXT');
 $id   = cot_import('id', 'G', 'INT');
 
 $response_code = 200;
@@ -18,19 +19,31 @@ if ($a == 'upload')
 }
 elseif ($a == 'display')
 {
+    $formId = "{$area}_{$item}_{$field}";
+
 	$t = new XTemplate(cot_tplfile('attach2.files', 'plug'));
 
 	// Metadata
-
 	$limits = att_get_limits();
 
+    $tpl = new XTemplate(cot_tplfile('attach2.templates.widget', 'plug'));
+    $tpl->parse();
+
+    $action = 'index.php?r=attach2&a=upload&area='.$area.'&item='.$item;
+    if(!empty($field)) $action .= '&field='.$field;
+
 	$t->assign(array(
+        'ATTACH_ID'      => $formId,
 		'ATTACH_AREA'    => $area,
 		'ATTACH_ITEM'    => $item,
+        'ATTACH_FIELD'   => $field,
+        'ATTACH_PARAM'   => '',
+        'ATTACH_TEMPLATES' => $tpl->text(),
+        'ATTACH_CHUNK'   => (int)$cfg['plugin']['attach2']['chunkSize'].'5000',
 		'ATTACH_EXTS'    => preg_replace('#[^a-zA-Z0-9,]#', '', $cfg['plugin']['attach2']['exts']),
 		'ATTACH_ACCEPT'  => preg_replace('#[^a-zA-Z0-9,*/-]#', '',$cfg['plugin']['attach2']['accept']),
 		'ATTACH_MAXSIZE' => $limits['file'],
-		'ATTACH_ACTION' => 'index.php?r=attach2&a=upload&area='.$area.'&item='.$item
+		'ATTACH_ACTION' => 'index.php?r=attach2&a=upload&area='.$area.'&item='.$action
 	));
 
 	$t->parse();
@@ -102,7 +115,9 @@ elseif ($a == 'reorder' && $_SERVER['REQUEST_METHOD'] == 'POST')
 
 	foreach ($orders as $order => $id)
 	{
-		$db->update($db_attach, array('att_order' => $order), "att_id = ? AND att_area = ? AND att_item = ? AND att_order != ?", array((int)$id, $area, $item, $order));
+		$db->update($db_attach, array('att_order' => $order),
+                "att_id = ? AND att_area = ? AND att_item = ? AND att_field = ? AND att_order != ?",
+            array((int)$id, $area, $item, $field, $order));
 	}
 
 	$response = array(

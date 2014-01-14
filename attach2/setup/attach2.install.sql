@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `cot_attach` (
 	`att_user` INT NOT NULL,
 	`att_area` VARCHAR(64) NOT NULL,
 	`att_item` INT NOT NULL,
+	`att_field` varchar(255) DEFAULT '' COMMENT 'Item field',
 	`att_path` VARCHAR(255) NOT NULL,
 	`att_filename` VARCHAR(255) NOT NULL,
 	`att_ext` VARCHAR(16) NOT NULL,

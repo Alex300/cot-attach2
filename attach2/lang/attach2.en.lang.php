@@ -54,6 +54,7 @@ $L['att_err_title'] = 'File caption is empty';
 $L['att_err_toobig'] = 'File is too big';
 $L['att_err_type'] = 'This type of files is not allowed';
 $L['att_err_upload'] = 'The file could not be uploaded';
+$L['att_err_count'] = 'Exceeded maximum number of files';
 
 // Configuration
 $L['cfg_folder'] = 'Directory for files';
@@ -78,3 +79,16 @@ $L['cfg_filespace'] = 'Total file space per user';
 $L['cfg_imageconvert'] = 'Convert all images to JPG on upload';
 $L['cfg_autoupload'] = 'Start uploading automatically';
 $L['cfg_sequential'] = 'Sequential uploading instead of concurrent';
+
+$L['cfg_thumb_watermark'] = array('Watermark for thumbnails', 'Path to watermark file. Supports png with transparency.
+     (Leave empty to disable)');
+$L['cfg_thumb_wm_x'] = array('Watermark. Min. width', 'The watermark will be placed on on a thumbnail only if thumbnail width
+     greater than a given');
+$L['cfg_thumb_wm_y'] = array('Watermark. Min. height', 'The watermark will be placed on on a thumbnail only if thumbnail height
+     greater than a given');
+$L['cfg_img_resize'] = array('Reduce uploaded images', 'Loaded images will be proportionally reduced
+    In accordance with the following parameters');
+$L['cfg_img_maxwidht']  = 'Reduce image width to';
+$L['cfg_img_maxheight'] = 'Reduce image height to';
+$L['cfg_chunkSize'] = array('Upload files by chunks (in bytes)', 'Large files can be uploaded in smaller chunks with
+    browsers supporting the Blob API. (Leave empty to disable)');
