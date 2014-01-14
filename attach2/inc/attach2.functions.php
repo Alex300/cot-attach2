@@ -1022,7 +1022,9 @@ function att_count($area, $item, $field = '', $type = 'all')
 {
 	global $db, $db_attach;
 	static $a_cache = array();
-	if (!isset($a_cache[$area][$item][$type]))
+
+    $cacheField = ($field != '') ? $field : '_empty_field_name_';
+	if (!isset($a_cache[$area][$item][$cacheField][$type]))
 	{
 		$type_filter = '';
 		if ($type == 'files')
@@ -1035,9 +1037,9 @@ function att_count($area, $item, $field = '', $type = 'all')
 		}
         if($field != '_all_') $type_filter .= " AND att_field=".$db->quote($field);
 
-		$a_cache[$area][$item][$type] = (int) $db->query("SELECT COUNT(*) FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter", array($area, (int)$item))->fetchColumn();
+		$a_cache[$area][$item][$cacheField][$type] = (int) $db->query("SELECT COUNT(*) FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter", array($area, (int)$item))->fetchColumn();
 	}
-	return $a_cache[$area][$item][$type];
+	return $a_cache[$area][$item][$cacheField][$type];
 }
 
 /**
