@@ -195,12 +195,6 @@ function att_ajax_handle_file_upload($uploaded_file, $name, $size, $type, $error
 	global $area, $item, $field, $cfg, $db, $db_attach, $usr, $L, $sys;
 
 	$file = new stdClass();
-//	$file->name = trim(mb_basename(stripslashes($name)));
-//	$file->size = intval($size);
-//	$file->type = $type;
-
-//    $file->name = $this->get_file_name($uploaded_file, $name, $size, $type, $error,
-//        $index, $content_range);
     $file->name = trim(mb_basename(stripslashes($name)));
     $file->size = fix_integer_overflow(intval($size));
     $file->type = $type;
@@ -404,7 +398,11 @@ function att_ajax_handle_file_upload($uploaded_file, $name, $size, $type, $error
             }
 		}
 		$file->size = $file_size;
-	}
+	}else{
+        // Если что то пошло не так на загрузке чанками
+        $file_path = $cfg['plugin']['attach2']['folder'] . '/' . $area . '/' . $item . '/'.$file->name;
+        if(file_exists($file_path)) unlink($file_path);
+    }
 	return $file;
 }
 
