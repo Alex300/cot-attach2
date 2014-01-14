@@ -42,12 +42,18 @@ function att_filebox($area, $item, $name = '', $type = 'all', $limit = -1)
 
 Данный виджет использует css стили bootstrap 3. Если он не используется на сайте, добавте свои стили.
 
+
 Примеры:
 
 {USER_ID|att_filebox('user', $this, 'avatar', 'image', 1)}
+
 {USER_ID|att_filebox('user', $this)}
 
+
+
 В связи с добавлением нового параметра "поле" для вложений, изменились сигнатуры функций в т.ч. виджетов:
+
+
 
 function att_count_files($area, $item, $field = '_all_')
 
@@ -56,6 +62,8 @@ function att_count_files($area, $item, $field = '_all_')
 function att_get($area, $item, $field = '', $column = '', $number = 'first')
 
 function att_count($area, $item, $field = '', $type = 'all')
+
+
 
 function att_widget($area, $item, $field = '', $tpl = 'attach2.widget', $width = '100%', $height = '200')
 
