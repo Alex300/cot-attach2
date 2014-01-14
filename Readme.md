@@ -35,6 +35,7 @@ With this plugin you can attach files and images to any Cotonti objects includin
  *
  * @todo проверка на то, что header уже выполнен или вывод css в header
  */
+
 function att_filebox($area, $item, $name = '', $type = 'all', $limit = -1)
 
 Параметр name - по аналогии с функциями для вывода элементов форм. Имя поля. Необязательный параметр. Позволяет добавить элементу несколько наборов вложений.
@@ -49,14 +50,22 @@ function att_filebox($area, $item, $name = '', $type = 'all', $limit = -1)
 В связи с добавлением нового параметра "поле" для вложений, изменились сигнатуры функций в т.ч. виджетов:
 
 function att_count_files($area, $item, $field = '_all_')
+
 function att_count_files($area, $item, $field = '_all_')
+
 function att_get($area, $item, $field = '', $column = '', $number = 'first')
+
 function att_count($area, $item, $field = '', $type = 'all')
 
 function att_widget($area, $item, $field = '', $tpl = 'attach2.widget', $width = '100%', $height = '200')
+
 function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type = 'all')
+
 function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads')
+
 function att_gallery($area, $item, $field = '', $tpl = 'attach2.gallery')
+
+
 
 Не забудьте внести изменения в Ваши шаблоны
 
