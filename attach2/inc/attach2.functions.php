@@ -469,10 +469,13 @@ function att_remove_thumbs($id)
 {
 	$res = true;
 
-	foreach (att_thumb_paths($id) as $thumb)
-	{
-		$res &= @unlink($thumb);
-	}
+    $thumbPaths = att_thumb_paths($id);
+    if(!empty($thumbPaths) && is_array($thumbPaths)){
+        foreach (att_thumb_paths($id) as $thumb)
+        {
+            $res &= @unlink($thumb);
+        }
+    }
 
 	return $res;
 }
