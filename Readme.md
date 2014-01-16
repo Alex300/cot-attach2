@@ -5,7 +5,7 @@ With this plugin you can attach files and images to any Cotonti objects includin
 Верся 2.1.7
 
 Что нового:
-- JavaScript-Load-Image обновлен до последней версии
+- JavaScript-Load-File обновлен до последней версии
 
 - Bootstrap обновлен до последней версии
 
@@ -35,6 +35,7 @@ With this plugin you can attach files and images to any Cotonti objects includin
  *
  * @todo проверка на то, что header уже выполнен или вывод css в header
  */
+
 
 function att_filebox($area, $item, $name = '', $type = 'all', $limit = -1)
 
