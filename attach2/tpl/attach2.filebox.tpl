@@ -62,14 +62,6 @@
 <script type="text/javascript">
 if (attConfig === undefined) {
     var attConfig = {
-        '{ATTACH_ID}': {
-            area: '{ATTACH_AREA}',
-            item: {ATTACH_ITEM},
-            field: '{ATTACH_FIELD}',
-            limit: {ATTACH_LIMIT},
-            chunk: {ATTACH_CHUNK},
-            param: '{ATTACH_PARAM}'
-        },
         exts: $.map('{ATTACH_EXTS}'.split(','), $.trim),
         accept: '{ATTACH_ACCEPT}',
         maxsize: {ATTACH_MAXSIZE},
@@ -77,6 +69,14 @@ if (attConfig === undefined) {
         sequential: {PHP.cfg.plugin.attach2.sequential}
     };
 }
+attConfig.{ATTACH_ID} = {
+    area: '{ATTACH_AREA}',
+    item: {ATTACH_ITEM},
+    field: '{ATTACH_FIELD}',
+    limit: {ATTACH_LIMIT},
+    chunk: {ATTACH_CHUNK},
+    param: '{ATTACH_PARAM}'
+};
 </script>
 
 <!-- The XDomainRequest Transport is included for cross-domain file deletion for IE 8 and IE 9 -->
