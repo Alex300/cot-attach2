@@ -316,50 +316,52 @@ function att_ajax_handle_file_upload($uploaded_file, $name, $size, $type, $error
 				// Fix image orientation via EXIF if possible
 				if (function_exists('exif_read_data'))
 				{
-					$exif = exif_read_data($file_path);
-					list($width, $height) = getimagesize($file_path);
-					$size_ok = function_exists('cot_img_check_memory') ? cot_img_check_memory($file_path, (int)ceil($width * $height * 4 / 1048576)) : true;
-					if ($size_ok && isset($exif['Orientation']) && !empty($exif['Orientation']) && in_array($exif['Orientation'], array(3, 6, 8)))
-					{
-						switch ($file_ext)
-						{
-							case 'gif':
-								$newimage = imagecreatefromgif($file_path);
-								break;
-							case 'png':
-                                $newimage = imagecreatefrompng($file_path);
-								imagealphablending($newimage, false);
-								imagesavealpha($newimage, true);
-								break;
-							default:
-								$newimage = imagecreatefromjpeg($file_path);
-								break;
-						}
-						switch ($exif['Orientation'])
-						{
-							case 3:
-								$newimage = imagerotate($newimage, 180, 0);
-								break;
-							case 6:
-								$newimage = imagerotate($newimage, -90, 0);
-								break;
-							case 8:
-								$newimage = imagerotate($newimage, 90, 0);
-								break;
-						}
-						switch ($file_ext)
-						{
-							case 'gif':
-								imagegif($newimage, $file_path);
-								break;
-							case 'png':
-								imagepng($newimage, $file_path);
-								break;
-							default:
-								imagejpeg($newimage, $file_path, 96);
-								break;
-						}
-					}
+					$exif = @exif_read_data($file_path);
+                    if($exif !== false){
+                        list($width, $height) = getimagesize($file_path);
+                        $size_ok = function_exists('cot_img_check_memory') ? cot_img_check_memory($file_path, (int)ceil($width * $height * 4 / 1048576)) : true;
+                        if ($size_ok && isset($exif['Orientation']) && !empty($exif['Orientation']) && in_array($exif['Orientation'], array(3, 6, 8)))
+                        {
+                            switch ($file_ext)
+                            {
+                                case 'gif':
+                                    $newimage = imagecreatefromgif($file_path);
+                                    break;
+                                case 'png':
+                                    $newimage = imagecreatefrompng($file_path);
+                                    imagealphablending($newimage, false);
+                                    imagesavealpha($newimage, true);
+                                    break;
+                                default:
+                                    $newimage = imagecreatefromjpeg($file_path);
+                                    break;
+                            }
+                            switch ($exif['Orientation'])
+                            {
+                                case 3:
+                                    $newimage = imagerotate($newimage, 180, 0);
+                                    break;
+                                case 6:
+                                    $newimage = imagerotate($newimage, -90, 0);
+                                    break;
+                                case 8:
+                                    $newimage = imagerotate($newimage, 90, 0);
+                                    break;
+                            }
+                            switch ($file_ext)
+                            {
+                                case 'gif':
+                                    imagegif($newimage, $file_path);
+                                    break;
+                                case 'png':
+                                    imagepng($newimage, $file_path);
+                                    break;
+                                default:
+                                    imagejpeg($newimage, $file_path, 96);
+                                    break;
+                            }
+                        }
+                    }
 				}
 
                 // Image resize
