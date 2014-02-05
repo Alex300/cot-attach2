@@ -958,9 +958,10 @@ function att_widget($area, $item, $field = '', $tpl = 'attach2.widget', $width =
  * @param  string $tpl Template code
  * @param  string $type Attachment type filter: 'files', 'images'. By default includes all attachments.
  * @param  int $limit
+ * @param  string $order
  * @return string        Rendered output
  */
-function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type = 'all', $limit = 0)
+function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type = 'all', $limit = 0, $order = '')
 {
 	global $db, $db_attach;
 
@@ -989,7 +990,22 @@ function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type
     $sqlLimit = '';
     if($limit > 0) $sqlLimit = 'LIMIT '.$limit;
 
-	$res = $db->query("SELECT * FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter ORDER BY att_order $sqlLimit", array($area, (int)$item));
+    $sqlOrder = ' ORDER BY att_order ASC';
+    if($order != '') $sqlOrder = ' ORDER BY '.$order;
+
+    $params = array($area);
+
+    if(is_array($item)){
+        $item = array_map('intval', $item);
+        $item = "IN(".implode(',', $item).")";
+    }else{
+        $item = intval($item);
+        $params[] = $item;
+        $item = '= ?';
+    }
+
+    $sql = "SELECT * FROM $db_attach WHERE att_area = ? AND att_item $item $type_filter $sqlOrder $sqlLimit";
+	$res = $db->query($sql, $params);
 
 	$num = 1;
 	foreach ($res->fetchAll() as $row)
@@ -1056,11 +1072,12 @@ function att_count($area, $item, $field = '', $type = 'all')
  * @param  string $field
  * @param  string $tpl Template code
  * @param  int $limit
+ * @param  string $order
  * @return string        Rendered output
  */
-function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads', $limit = 0)
+function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads', $limit = 0, $order = '')
 {
-	return att_display($area, $item, $field, $tpl, 'files', $limit);
+	return att_display($area, $item, $field, $tpl, 'files', $limit, $order);
 }
 
 /**
@@ -1070,11 +1087,12 @@ function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads', $l
  * @param  string $field
  * @param  string $tpl Template code
  * @param  int $limit
+ * @param  string $order
  * @return string        Rendered output
  */
-function att_gallery($area, $item, $field = '', $tpl = 'attach2.gallery', $limit = 0)
+function att_gallery($area, $item, $field = '', $tpl = 'attach2.gallery', $limit = 0, $order = '')
 {
-	return att_display($area, $item, $field, $tpl, 'images', $limit);
+	return att_display($area, $item, $field, $tpl, 'images', $limit, $order);
 }
 
 
