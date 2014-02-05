@@ -989,7 +989,7 @@ function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type
     $sqlLimit = '';
     if($limit > 0) $sqlLimit = 'LIMIT '.$limit;
 
-	$res = $db->query("SELECT * FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter ORDER BY att_order $limit", array($area, (int)$item));
+	$res = $db->query("SELECT * FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter ORDER BY att_order $sqlLimit", array($area, (int)$item));
 
 	$num = 1;
 	foreach ($res->fetchAll() as $row)
