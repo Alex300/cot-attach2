@@ -957,9 +957,10 @@ function att_widget($area, $item, $field = '', $tpl = 'attach2.widget', $width =
  * @param  string $field
  * @param  string $tpl Template code
  * @param  string $type Attachment type filter: 'files', 'images'. By default includes all attachments.
+ * @param  int $limit
  * @return string        Rendered output
  */
-function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type = 'all')
+function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type = 'all', $limit = 0)
 {
 	global $db, $db_attach;
 
@@ -985,7 +986,10 @@ function att_display($area, $item, $field = '',  $tpl = 'attach2.display', $type
         $type_filter .= " AND att_field = ".$db->quote($field);
     }
 
-	$res = $db->query("SELECT * FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter ORDER BY att_order", array($area, (int)$item));
+    $sqlLimit = '';
+    if($limit > 0) $sqlLimit = 'LIMIT '.$limit;
+
+	$res = $db->query("SELECT * FROM $db_attach WHERE att_area = ? AND att_item = ? $type_filter ORDER BY att_order $limit", array($area, (int)$item));
 
 	$num = 1;
 	foreach ($res->fetchAll() as $row)
@@ -1051,11 +1055,12 @@ function att_count($area, $item, $field = '', $type = 'all')
  * @param  integer $item Target item id
  * @param  string $field
  * @param  string $tpl Template code
+ * @param  int $limit
  * @return string        Rendered output
  */
-function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads')
+function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads', $limit = 0)
 {
-	return att_display($area, $item, $field, $tpl, 'files');
+	return att_display($area, $item, $field, $tpl, 'files', $limit);
 }
 
 /**
@@ -1064,11 +1069,12 @@ function att_downloads($area, $item, $field = '', $tpl = 'attach2.downloads')
  * @param  integer $item Target item id
  * @param  string $field
  * @param  string $tpl Template code
+ * @param  int $limit
  * @return string        Rendered output
  */
-function att_gallery($area, $item, $field = '', $tpl = 'attach2.gallery')
+function att_gallery($area, $item, $field = '', $tpl = 'attach2.gallery', $limit = 0)
 {
-	return att_display($area, $item, $field, $tpl, 'images');
+	return att_display($area, $item, $field, $tpl, 'images', $limit);
 }
 
 
