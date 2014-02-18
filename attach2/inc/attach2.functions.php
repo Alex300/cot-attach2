@@ -393,7 +393,11 @@ function att_remove($id)
 		{
 			return false;
 		}
+        $path_parts = pathinfo($row['att_path']);
 		$res &= @unlink($row['att_path']);
+        $fCnt = array_sum(array_map('is_file', glob($path_parts['dirname'].'/*')));
+        // Delete folder if it empty
+        if($fCnt === 0)  @rmdir($path_parts['dirname']);
 		$res &= att_remove_thumbs($row['att_id']);
 		@rmdir($cfg['plugin']['attach2']['folder'] . '/_thumbs/' . $id);
 		$res &= $db->delete($db_attach, "att_id = ?", array((int) $id)) == 1;
@@ -448,7 +452,11 @@ function att_remove_all($user_id = null, $area = null, $item_id = null)
 	$count = $sql->rowCount();
 	foreach ($sql->fetchAll() as $row)
 	{
+        $path_parts = pathinfo($row['att_path']);
 		@unlink($row['att_path']);
+        $fCnt = array_sum(array_map('is_file', glob($path_parts['dirname'].'/*')));
+        // Delete folder if it empty
+        if($fCnt === 0)  @rmdir($path_parts['dirname']);
 		att_remove_thumbs($row['att_id']);
 		@rmdir($cfg['plugin']['attach2']['folder'] . '/_thumbs/' . $row['att_id']);
 	}
