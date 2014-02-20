@@ -1,6 +1,7 @@
 <!-- BEGIN: MAIN -->
 <link rel="stylesheet" href="plugins/attach2/js/attach2.css">
-<a href="index.php?r=attach2&amp;a=display&amp;area={ATTACH_AREA}&amp;item={ATTACH_ITEM}" class="attLink" title="{PHP.L.att_attachments}">{PHP.L.att_attach}</a>
+<a href="index.php?r=attach2&amp;a=display&amp;area={ATTACH_AREA}&amp;item={ATTACH_ITEM}&amp;field={ATTACH_FIELD}&amp;nc={PHP.cot_plugins_enabled.attach2.version}"
+   class="attLink" title="{PHP.L.att_attachments}">{PHP.L.att_attach}</a>
 
 <div id="attModal" class="jqmWindow">
 	<div id="attModalTitle">
