@@ -62,7 +62,7 @@
                     <i class="glyphicon glyphicon-ban-circle"></i>
                     <span>{PHP.L.att_cancel}</span>
                 </button>
-                <button type="button" class="btn btn-danger delete">
+                <button type="button" class="btn btn-danger delete toggle">
                     <i class="glyphicon glyphicon-trash"></i>
                     <span>{PHP.L.Delete}</span>
                 </button>
