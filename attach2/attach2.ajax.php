@@ -32,11 +32,20 @@ elseif ($a == 'display')
     $action = 'index.php?r=attach2&a=upload&area='.$area.'&item='.$item;
     if(!empty($field)) $action .= '&field='.$field;
 
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : -1; // Use Plugin config value
+    $limits = att_get_limits();
+    if($limit == 0){
+        $limit = 100000000000000000;
+    }elseif($limit == -1){
+        $limit = $cfg['plugin']['attach2']['items'] > 0 ? (int)$cfg['plugin']['attach2']['items'] : 100000000000000000;
+    }
+
 	$t->assign(array(
         'ATTACH_ID'      => $formId,
 		'ATTACH_AREA'    => $area,
 		'ATTACH_ITEM'    => $item,
         'ATTACH_FIELD'   => $field,
+        'ATTACH_LIMIT'   => $limit,
         'ATTACH_PARAM'   => '',
         'ATTACH_TEMPLATES' => $tpl->text(),
         'ATTACH_CHUNK'   => (int)$cfg['plugin']['attach2']['chunkSize'].'5000',
