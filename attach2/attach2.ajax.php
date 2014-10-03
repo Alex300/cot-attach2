@@ -52,7 +52,7 @@ elseif ($a == 'display')
 		'ATTACH_EXTS'    => preg_replace('#[^a-zA-Z0-9,]#', '', $cfg['plugin']['attach2']['exts']),
 		'ATTACH_ACCEPT'  => preg_replace('#[^a-zA-Z0-9,*/-]#', '',$cfg['plugin']['attach2']['accept']),
 		'ATTACH_MAXSIZE' => $limits['file'],
-		'ATTACH_ACTION' => 'index.php?r=attach2&a=upload&area='.$area.'&item='.$action
+		'ATTACH_ACTION' => $action
 	));
 
 	$t->parse();
