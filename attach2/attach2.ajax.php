@@ -48,7 +48,7 @@ elseif ($a == 'display')
         'ATTACH_LIMIT'   => $limit,
         'ATTACH_PARAM'   => '',
         'ATTACH_TEMPLATES' => $tpl->text(),
-        'ATTACH_CHUNK'   => (int)$cfg['plugin']['attach2']['chunkSize']',
+        'ATTACH_CHUNK'   => (int)$cfg['plugin']['attach2']['chunkSize'],
 		'ATTACH_EXTS'    => preg_replace('#[^a-zA-Z0-9,]#', '', $cfg['plugin']['attach2']['exts']),
 		'ATTACH_ACCEPT'  => preg_replace('#[^a-zA-Z0-9,*/-]#', '',$cfg['plugin']['attach2']['accept']),
 		'ATTACH_MAXSIZE' => $limits['file'],
