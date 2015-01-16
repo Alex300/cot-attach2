@@ -137,6 +137,7 @@ else
 {
 	// ...otherwise just send the whole file
 	readfile($file);
+	exit;
 }
 
 /**
@@ -210,12 +211,12 @@ function att_get_mime($path)
 
 	if (function_exists('mime_content_type'))
 	{
-		return mime_content_type($filename);
+		return mime_content_type($path);
 	}
 	elseif (function_exists('finfo_open'))
 	{
 		$finfo = finfo_open(FILEINFO_MIME);
-		$mimetype = finfo_file($finfo, $filename);
+		$mimetype = finfo_file($finfo, $path);
 		finfo_close($finfo);
 		return $mimetype;
 	}
